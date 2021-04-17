@@ -1,51 +1,29 @@
-import sys
-import re
-import random
+import os
+import logging
+from discord.ext import commands
+from dotenv import load_dotenv
+from logics import roll as cast, info_msg
 
-def valid(action):
-    regex = re.compile('!([1-9]\d*)*[dD][1-9]+\d*')
-    return regex.match(action.strip()) 
+logging.basicConfig(level=logging.INFO)
+load_dotenv()
 
-def err_msg(user_input):
-    return 'invalid input: {} | usage examples: !d20, !1d6, !4d8'.format(user_input)
+def start():
+    bot = commands.Bot(command_prefix='!', help_command=None)
 
-def parse_params(action):
-    params = action.partition('d') 
-    throws = params[0] or 1
-    die = params[2]
+    @bot.event
+    async def on_ready():
+        print('Bot logged in as {0.user.name}.'.format(bot))
 
-    return (int(throws), int(die))
+    @bot.command()
+    async def roll(ctx, dice):
+        result = cast(dice)
+        await ctx.send(result)
 
-def result(action, rolls):
-    if len(rolls) == 1:
-        return '{}: {}'.format(action, str(rolls[0]))
+    @bot.command()
+    async def help(ctx):
+        await ctx.send(info_msg())
+   
+    token = os.getenv('BOT_TOKEN')
+    bot.run(token)
 
-    total = sum(rolls)
-    rolls = ', '.join(str(roll) for roll in rolls)
-
-    return '{}: rolls: {} | total: {}'.format(action, rolls, total)
-
-def roll(throws, die):
-    rolls = []
-
-    for throw in range(throws):
-        rolls.append(random.randint(1, die))
-
-    return rolls
-
-def initiate(action):
-    if not valid(action):
-        return err_msg(action)
-    
-    action = action[1:].lower()
-    (throws, die) = parse_params(action)
-    
-    rolls = roll(throws, die)
-
-    return result(action, rolls)
-
-
-cli_input = sys.argv[1:]
-
-for arg in cli_input:
-    print(initiate(arg))
+start()
